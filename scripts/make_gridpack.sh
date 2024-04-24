@@ -77,7 +77,9 @@ pushd ${PROC_DIR}/${PROCESS}
 		    rm -rf tmp*
 		    cp ${PROC_DIR}/${PROCESS}/Cards/madspin_card.dat ./madspin_card.dat
 		fi
+  		set +e
 		tar -zcf "../gridpack_${PROCESS}.tar.gz" ./*
+  		set -e
 	popd
 
 	rm -r "gridpack_${PROCESS}"
