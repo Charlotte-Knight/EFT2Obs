@@ -1,5 +1,6 @@
-from __future__ import print_function
-from builtins import range
+#!/usr/bin/python
+
+#from builtins import range
 from array import array
 import math
 import json

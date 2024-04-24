@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import os
 import sys
 import tools
@@ -12,14 +14,14 @@ args = parser.parse_args()
 
 process = args.process
 
-sys.path.append('%s/%s' % (os.environ['PWD'], os.environ['MG_DIR']))
-sys.path.append(os.path.join(os.environ['MG_DIR'], process.split('/')[-1], 'bin', 'internal'))
+sys.path.append('%s/%s' % (os.environ['EFT2OBS_DIR'], os.environ['MG_DIR']))
+sys.path.append(os.path.join(os.environ['PROC_DIR'], process.split('/')[-1], 'bin', 'internal'))
 
 import check_param_card as param_card_mod
 
 cfg = tools.GetConfigFile(args.config)
 
-param_card_path = '%s/%s/Cards/param_card.dat' % (os.environ['MG_DIR'], process.split('/')[-1])
+param_card_path = '%s/%s/Cards/param_card.dat' % (os.environ['PROC_DIR'], process.split('/')[-1])
 print '>> Parsing %s' % param_card_path
 param_card = param_card_mod.ParamCard(param_card_path)
 
