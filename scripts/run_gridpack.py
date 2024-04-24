@@ -185,6 +185,8 @@ else:
     subprocess.check_call(['cp', '%s/events_%i.hepmc.gz' % (load_hepmc, seed), '%s/events_%i.hepmc.gz' % (tmpdir, seed)])
     subprocess.check_call(['gunzip', '%s/events_%i.hepmc.gz' % (tmpdir, seed)])
 
+if args.to_step == 'shower':
+	finished = True
 
 os.chdir(iwd)
 

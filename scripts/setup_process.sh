@@ -11,8 +11,8 @@ PROCESS=$1
 
 pushd "${PROC_DIR}"
 if [ -d "${PROCESS##*/}" ]; then
-	echo "Process directory already exists, remove this first to run setup"
-	exit 1
+	echo "Process directory already exists, will remove it to run setup"
+	rm -r ${PROCESS##*/}
 fi
 ${EFT2OBS_DIR}/${MG_DIR}/bin/mg5_aMC "${CARDS_DIR}/${PROCESS}/proc_card.dat"
 popd
