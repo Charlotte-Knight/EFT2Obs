@@ -11,10 +11,7 @@ model_name=$(python -c "print('${model_line}'.split(' ')[2].split('-')[0])")
 echo "Detected model: $model_name"
 echo "Downloading UFO model"
 
-{
-  echo "import model $model_name"
-} > mgrunscript
-${EFT2OBS_DIR}/${MG_DIR}/bin/mg5_aMC < mgrunscript
+echo "import model $model_name" | ${EFT2OBS_DIR}/${MG_DIR}/bin/mg5_aMC < mgrunscript
 
 if [[ -n $(grep "${model_name}-" $PROC_CARD_PATH) ]] ; then
   restrict_card_name=restrict_$(python -c "print('${model_line}'.split('-')[1])").dat
