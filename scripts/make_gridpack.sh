@@ -31,6 +31,7 @@ pushd ${PROC_DIR}/${PROCESS}
 	  echo "reweight=OFF"
 	  echo "done"
 	  echo "set gridpack True"
+		echo "set run_card use_syst False"
 	  for i in "${SETTERS[@]}"; do echo ${i}; done
 	  echo "done"
 	} > mgrunscript
