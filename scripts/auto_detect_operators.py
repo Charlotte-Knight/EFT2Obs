@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 """
 Automatically detect which parameters are relavant for a provided process.
 Given this information, create a process-specific config file and reweight card.
@@ -35,14 +37,16 @@ import argparse
 import re
 
 MG_DIR = os.environ.get("MG_DIR")
-sys.path.append(os.path.join(MG_DIR))
-sys.path.append(os.path.join(MG_DIR, "models"))
+CARDS_DIR = os.environ.get("CARDS_DIR")
+PROC_DIR = os.environ.get("PROC_DIR")
+EFT2OBS_DIR = os.environ.get("EFT2OBS_DIR")
+sys.path.append(os.path.join(EFT2OBS_DIR, MG_DIR))
+sys.path.append(os.path.join(EFT2OBS_DIR, MG_DIR, "models"))
 
 import check_param_card as param_card_mod
 
-
 def loadModel(process):
-  with open(os.path.join("cards", process, "proc_card.dat"), "r") as f:
+  with open(os.path.join(CARDS_DIR, process, "proc_card.dat"), "r") as f:
     model_name = f.readline().strip("\n").split("import model")[1].split("-")[0].strip(" ")
   
   print(">> Loading model: %s"%model_name)  
@@ -54,7 +58,7 @@ def getParameters(process, model, blocks):
   Find all parameters belonging to blocks and then cross-check with the param card.
   There may be fewer parameters in the param card if a restrict card was used.
   """
-  param_card = param_card_mod.ParamCard(os.path.join(MG_DIR, process.split('/')[-1], "Cards", "param_card.dat"))
+  param_card = param_card_mod.ParamCard(os.path.join(PROC_DIR, process.split('/')[-1], "Cards", "param_card.dat"))
 
   params = []
   for param in model.all_parameters:
@@ -79,13 +83,13 @@ def makeConfig(process, model, params, args):
 
   extra_args = " --def-val %s --def-sm %s --def-gen %s"%(args.def_val, args.def_sm, args.def_gen)
   if args.set_inactive != None: extra_args += " --set-inactive %s"%" ".join(args.set_inactive)
-  command = "python scripts/make_config.py -p %s -o cards/%s/config.json --pars %s"%(process, process, block_param_nums) + extra_args
+  command = "python %s/scripts/make_config.py -p %s -o %s/%s/config.json --pars %s"%(EFT2OBS_DIR, process, CARDS_DIR, process, block_param_nums) + extra_args
   print(command)
   os.system(command)
 
 def makeReweight(process):
   print(">> Making reweight card")
-  command = "python scripts/make_reweight_card.py cards/%s/config.json cards/%s/reweight_card.dat"%(process, process)
+  command = "python %s/scripts/make_reweight_card.py %s/%s/config.json %s/%s/reweight_card.dat"%(EFT2OBS_DIR, CARDS_DIR, process, CARDS_DIR,process)
   os.system(command)
 
 
@@ -96,7 +100,7 @@ delims = "()-+*/"
 regex = "".join(["\%s|"%delim for delim in delims])[:-1]
 
 def findRelevantParameters1(process, possible_params):
-  with open(os.path.join(MG_DIR, process.split('/')[-1], "SubProcesses", "coupl.inc"), "r") as f:
+  with open(os.path.join(PROC_DIR, process.split('/')[-1], "SubProcesses", "coupl.inc"), "r") as f:
     couplings = []
 
     end = False
@@ -125,7 +129,7 @@ def findRelevantParameters1(process, possible_params):
 
 def getPSFiles(process):
   #assume all directories in SubProcesses folder are subprocesses
-  SubProcesses_path = os.path.join(MG_DIR, process.split('/')[-1], "SubProcesses")  
+  SubProcesses_path = os.path.join(PROC_DIR, process.split('/')[-1], "SubProcesses")  
   subprocesses = os.walk(SubProcesses_path).next()[1]
 
   ps_files = []
@@ -271,7 +275,7 @@ if not args.noValidation:
 
 if smeftsim_v3:
   prop_corr_p = sorted(getRelevantParametersPropCorr(process, possible_params, model))
-  print(">> Relevant parameters from propagator corrections: %s"%prop_corr_p)
+  print(">> Relevant parameters from spropagator corrections: %s"%prop_corr_p)
   relevant_params = sorted(set(p1).union(prop_corr_p))
 else:
   relevant_params = sorted(p1)
