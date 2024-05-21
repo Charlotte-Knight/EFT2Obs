@@ -3,6 +3,20 @@ import json
 import yaml
 from array import array
 
+def removeIndentInLists(json_str):  
+  new_str = ""
+  in_list = 0
+  for char in json_str:
+    if char == "[":
+      in_list += 1
+    elif char == "]":
+      in_list -= 1
+
+    if (char != "\n") or (in_list == 0):
+      new_str += char
+    
+  return new_str
+
 def Translate(arg, translations):
     if arg in translations:
         return translations[arg]
@@ -167,7 +181,12 @@ class EFTScaling(object):
     def is2D(self):
         return isinstance(self.bin_edges[0][0], list)
     
-    def writeToJSON(self, filename, legacy=False, translate_txt=dict()):
+    def excludeRel(self, rel):
+        max_size = np.max([np.abs(term.val) for term in self.terms])
+        print(max_size, rel)
+        self.terms = [term for term in self.terms if np.max(np.abs(term.val)) / max_size > rel]
+
+    def writeToJSON(self, filename, legacy=False, translate_txt=dict(), indent=None):
         with open(filename, 'w') as outfile:
             if legacy:
                 res = {
@@ -186,7 +205,31 @@ class EFTScaling(object):
                     "bin_labels": self.bin_labels,
                     "parameters": self.parameters() # this is as a convenience for other scripts, we won't parse it when reading in
                 }
-            outfile.write(json.dumps(res, sort_keys=False))
+            outfile.write(json.dumps(res, sort_keys=False, indent=indent))
+
+    def writeToCommonJSON(self, filename, indent=None):
+        metadata = {
+            "coefficients": self.parameters(),
+            "observable_shape": "(%d,)"%self.nbins,
+            "observable_names": self.bin_labels
+        }
+
+        def getTermName(term):
+            if len(term.params) == 1:
+                return "a_" + "_".join(term.params)
+            else:
+                return "b_" + "_".join(term.params)
+
+        data = {
+            "central": {getTermName(term): term.val.tolist() for term in self.terms},
+            "u_MC": {getTermName(term): term.uncert.tolist() for term in self.terms}
+        }
+
+        with open(filename, 'w') as outfile:
+            res = {"metadata": metadata, "data": data}
+            s = json.dumps(res, sort_keys=True, indent=indent)
+            outfile.write(removeIndentInLists(s))
+
 
     def writeToYAML(self, filename):
         with open(filename, 'w') as outfile:
@@ -293,6 +336,15 @@ class EFT2ObsHist(object):
                     self.sumW[ip] = np.zeros(self.nbins())
                     self.sumW2[ip] = np.zeros(self.nbins())
 
+
+    def removeEmptyBins(self):
+        empty_bin_idx = self.sumW.sum(axis = 0) == 0
+
+        self.sumW = self.sumW[:, ~empty_bin_idx]
+        self.sumW2 = self.sumW2[:, ~empty_bin_idx]
+        self.numEntries = self.numEntries[:, ~empty_bin_idx]
+        self.bin_edges = list(np.array(self.bin_edges)[~empty_bin_idx])
+        self.bin_labels = list(np.array(self.bin_labels)[~empty_bin_idx])
 
     def writeToJSON(self, filename):
         with open(filename, 'w') as outfile:
