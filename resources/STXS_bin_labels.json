@@ -1,5 +1,6 @@
 {
-  "/HiggsTemplateCrossSections/HTXS_stage1_2_pTjet30": [
+  "/inclusive/myh1": ["inclusive"],
+  "/HiggsTemplateCrossSectionsLess/HTXS_stage1_2_pTjet30": [
     "UNKNOWN",
     "GG2H_FWDH",
     "GG2H_PTH_200_300",
