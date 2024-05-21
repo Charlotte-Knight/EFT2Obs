@@ -1,8 +1,7 @@
 # syntax=docker/dockerfile:1
 
 FROM almalinux:latest
-RUN dnf -y group install "Development Tools" "Scientific Support"
-RUN dnf -y install python-devel wget vim zlib-devel gzip f2py python-yaml boost-devel rsync gfortran cmake
+RUN dnf -y install gcc-c++ gfortran cmake perl python-devel python-yaml python-six zlib-devel wget vim gzip f2py rsync patch
 
 WORKDIR /eft2obs
 
@@ -33,7 +32,10 @@ RUN ./setup/setup_model.sh SMEFTsim_A_U35_alphaScheme_UFO_v2_1 SMEFTsim_MFV_MwSc
 
 COPY setup/setup_pdf.sh setup/setup_pdf.sh
 SHELL ["/bin/bash", "-c"]
-RUN ./setup/setup_pdf.sh NNPDF23_nlo_as_0119 NNPDF31_nnlo_as_0118_mc_hessian_pdfas NNPDF31_nnlo_as_0118_nf_4_mc_hessian NNPDF31_nnlo_hessian_pdfas NNPDF31_nnlo_as_0118_nf_4 NNPDF40_nnlo_as_01180 NNPDF40_nnlo_as_01180_hessian
+RUN ./setup/setup_pdf.sh NNPDF31_nnlo_as_0118_mc_hessian_pdfas NNPDF31_nnlo_as_0118_nf_4_mc_hessian NNPDF31_nnlo_hessian_pdfas NNPDF31_nnlo_as_0118_nf_4 
+#NNPDF40_nnlo_as_01180 NNPDF40_nnlo_as_01180_hessian NNPDF23_nlo_as_0119
+
+RUN ln -s /usr/bin/python3 /usr/bin/python
 
 COPY . .
 
