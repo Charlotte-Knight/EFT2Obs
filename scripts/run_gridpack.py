@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from __future__ import print_function
 import argparse
 import subprocess
@@ -77,13 +79,16 @@ if load_hepmc is not None:
     print('>> Loading HepMC input from %s' % load_hepmc)
 ignore_beams = args.rivet_ignore_beams
 
-# Check if TMPDIR is set
-if 'TMPDIR' not in os.environ:
-    tmpdir = subprocess.check_output(['mktemp', '-d']).strip().decode()
-    print('>> No TMPDIR was set, created %s' % tmpdir)
-else:
-    tmpdir = os.environ['TMPDIR']
-    print('>> TMPDIR is set to %s' % tmpdir)
+# # Check if TMPDIR is set
+# if 'TMPDIR' not in os.environ:
+#     tmpdir = subprocess.check_output(['mktemp', '-d']).strip().decode()
+#     print('>> No TMPDIR was set, created %s' % tmpdir)
+# else:
+#     tmpdir = os.environ['TMPDIR']
+#     print('>> TMPDIR is set to %s' % tmpdir)
+
+tmpdir = subprocess.check_output(['mktemp', '-d']).strip().decode()
+print('>> TMPDIR created %s' % tmpdir)
 
 gridpack_dir = tmpdir+'/gridpack_run_%i' % seed
 
