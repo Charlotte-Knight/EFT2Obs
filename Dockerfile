@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 
-FROM centos:7
-RUN yum -y group install "Development Tools" "Scientific Support"
-RUN yum -y install python-devel wget vim zlib-devel gzip f2py python-yaml
+FROM almalinux:latest
+RUN dnf -y group install "Development Tools" "Scientific Support"
+RUN dnf -y install python-devel wget vim zlib-devel gzip f2py python-yaml boost-devel rsync gfortran cmake
 
 WORKDIR /eft2obs
 
@@ -30,6 +30,10 @@ RUN ./setup/setup_rivet_plugins.sh
 COPY setup/setup_model.sh setup/setup_model.sh
 SHELL ["/bin/bash", "-c"]
 RUN ./setup/setup_model.sh SMEFTsim_A_U35_alphaScheme_UFO_v2_1 SMEFTsim_MFV_MwScheme_UFO SMEFTsim_MFV_alphaScheme_UFO SMEFTsim_U35_MwScheme_UFO SMEFTsim_U35_alphaScheme_UFO SMEFTsim_general_MwScheme_UFO SMEFTsim_general_alphaScheme_UFO SMEFTsim_topU3l_MwScheme_UFO SMEFTsim_topU3l_alphaScheme_UFO SMEFTsim_top_MwScheme_UFO SMEFTsim_top_alphaScheme_UFO SMEFTatNLO 
+
+COPY setup/setup_pdf.sh setup/setup_pdf.sh
+SHELL ["/bin/bash", "-c"]
+RUN ./setup/setup_pdf.sh NNPDF31_nnlo_hessian_pdfas NNPDF31_nnlo_as_0118_nf_4 NNPDF23_nlo_as_0119
 
 COPY . .
 
