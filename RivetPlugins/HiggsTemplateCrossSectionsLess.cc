@@ -194,11 +194,11 @@ namespace Rivet {
       if (isVH(prodMode)) {
         // Look for W or Z from Higgs decay (V on-shell) and count number of leptons (in case of off-shell)
         for (auto ptcl : HepMCUtils::particles(HSvtx, HepMC::children)) {
-          if (PID::isW(ptcl->pdg_id())) {
+          if (PID::isW(ptcl->pdg_id()) || fabs(ptcl->pdg_id())==9000006) {
             ++nWs;
             cat.V = Particle(ptcl);
           }
-          else if (PID::isZ(ptcl->pdg_id())) {
+          else if (PID::isZ(ptcl->pdg_id()) || fabs(ptcl->pdg_id())==9000005) {
             ++nZs;
             cat.V = Particle(ptcl);
           }
@@ -212,7 +212,7 @@ namespace Rivet {
           cat.V = getLastInstance(cat.V);
         else {
           is_onshell = false;
-          std::cout << "Found off-shell" << std::endl;
+          std::cout << "Found off-shell and " << nLep << "leptons" << std::endl;
           for (auto ptcl : HepMCUtils::particles(HSvtx, HepMC::children)) {
             if (!PID::isHiggs(ptcl->pdg_id())) {
               uncatV_decays += Particle(ptcl);
@@ -279,7 +279,7 @@ namespace Rivet {
           Particle top = getLastInstance(Particle(ptcl));
           if (top.genParticle()->end_vertex())
             for (const auto &child : top.children())
-              if (PID::isW(child.pid()))
+              if (PID::isW(child.pid()) || fabs(child.pid())==9000006)
                 Ws += getLastInstance(child);
         }
       }

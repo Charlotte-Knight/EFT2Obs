@@ -27,6 +27,12 @@ parser.add_argument('--filter-params', default=None, help="Specify a subset of p
 parser.add_argument('--remove-empty-bins', action='store_true', help="Remove bins with zero entries")
 parser.add_argument('--print-style', default="perBin", choices=["perBin", "perTerm"], help="Specify the format for printing to the screen")
 parser.add_argument('--color-above', default=None, type=float, help="When using --print-style perTerm, highlight relative uncertainties above this threshold")
+
+parser.add_argument('--skip-print', action='store_true', help="Skip printing to screen")
+parser.add_argument('--skip-lin-terms', action='store_true', help="Skip linear terms")
+parser.add_argument('--skip-square-terms', action='store_true', help="Skip square terms")
+parser.add_argument('--skip-cross-terms', action='store_true', help="Skip cross terms")
+
 args = parser.parse_args()
 
 
@@ -91,7 +97,6 @@ if is2D:
     # areas = list(hists[0].volumes())
     areas = [hists[0].bins()[ib].volume() for ib in range(nbins)]
 else:
-    print(nbins)
     edges = [list(hists[0].bins()[ib].xEdges()) for ib in range(nbins)]
     areas = list(hists[0].areas())
     # print (areas,  [hists[0].bins[ib].sumW for ib in range(nbins)])
@@ -144,8 +149,12 @@ e2ohist = EFT2ObsHist(
 if args.remove_empty_bins:
     e2ohist.removeEmptyBins()
 
-#e2ohist.printToScreen(style=args.print_style, colorAbove=args.color_above)
-e2oscaling = EFTScaling.fromEFT2ObsHist(e2ohist, filter=filter)
+if not args.skip_print:
+    e2ohist.printToScreen(style=args.print_style, colorAbove=args.color_above)
+e2oscaling = EFTScaling.fromEFT2ObsHist(e2ohist, filter=filter, 
+                                        lin_terms=not args.skip_lin_terms,
+                                        square_terms=not args.skip_square_terms, 
+                                        cross_terms=not args.skip_cross_terms)
 
 if args.exclude_rel is not None:
     e2oscaling.excludeRel(args.exclude_rel)
@@ -159,8 +168,8 @@ if 'json' in save_formats:
     e2oscaling.writeToJSON('%s.json' % args.output, legacy=args.legacy, indent=2)
 
 if 'common_json' in save_formats:
-    print('>> Saving histogram parametrisation to %s.json' % args.output)
-    e2oscaling.writeToCommonJSON('%s.json' % args.output, indent=1)
+    print('>> Saving histogram parametrisation to %s.common.json' % args.output)
+    e2oscaling.writeToCommonJSON('%s.common.json' % args.output, indent=1, decimals=4)
 
 if 'yaml' in save_formats:
     print('>> Saving histogram parametrisation to %s.yaml' % args.output)

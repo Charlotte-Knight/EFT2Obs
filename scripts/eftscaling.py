@@ -7,20 +7,6 @@ import json
 import yaml
 from array import array
 
-def removeIndentInLists(json_str):  
-  new_str = ""
-  in_list = 0
-  for char in json_str:
-    if char == "[":
-      in_list += 1
-    elif char == "]":
-      in_list -= 1
-
-    if (char != "\n") or (in_list == 0):
-      new_str += char
-    
-  return new_str
-
 def Translate(arg, translations):
     if arg in translations:
         return translations[arg]
@@ -31,7 +17,7 @@ class EFTTerm(object):
         self.params = tuple(sorted(params))
         self.val = np.array(val)
         self.uncert = np.array(uncert)
-    
+
     @classmethod
     def fromJSON(cls, t):
         return cls(t[0], t[1], t[2])
@@ -55,8 +41,50 @@ class EFTScaling(object):
         self.sm_vals = np.array(sm_vals)
         self.terms = list(terms)
 
+    def __add__(self, other):
+        if not isinstance(other, EFTScaling):
+            raise TypeError("Unsupported operand type. Both operands must be of type EFTScaling.")
+        
+        if self.nbins != other.nbins or self.bin_edges != other.bin_edges or self.bin_labels != other.bin_labels:
+            raise ValueError("Both EFTScaling objects must have the same nbins, bin_edges, and bin_labels.")
+        
+        all_params = set([term.params for term in self.terms] + [term.params for term in other.terms])
+        new_terms = []
+
+        for param in all_params:
+            val = np.zeros(self.nbins)
+            uncert2 = np.zeros(self.nbins)
+            for term in self.terms:
+                if term.params == param:
+                    val += term.val
+                    uncert2 += term.uncert**2
+
+            for term in other.terms:
+                if term.params == param:
+                    val += term.val
+                    uncert2 += term.uncert**2
+
+            new_terms.append(EFTTerm(param, val, np.sqrt(uncert2)))
+        
+        return EFTScaling(self.nbins, self.bin_edges, self.bin_labels, self.sm_vals, new_terms)
+
+    def keepTerm(params, filter=list(), lin_terms=True, square_terms=True, cross_terms=True):
+        for p in set(params):
+            if len(filter) > 0 and p not in filter:
+                return False
+        
+        is_lin_term = len(params) == 1
+        is_square_term = len(params) == 2 and len(set(params)) == 1
+        is_cross_term = len(params) == 2 and len(set(params)) == 2
+
+        if (is_lin_term and not lin_terms) or (is_square_term and not square_terms) or (is_cross_term and not cross_terms):
+            print('Skipping {}'.format(params))
+            return False
+        else:
+            return True
+
     @classmethod
-    def fromEFT2ObsHist(cls, e2ohist, filter=list()):
+    def fromEFT2ObsHist(cls, e2ohist, filter=list(), lin_terms=True, square_terms=True, cross_terms=True):
         norm_vals, norm_uncerts = e2ohist.normedBinStats()
         assert(norm_vals.shape[0] == norm_uncerts.shape[0] == len(e2ohist.terms))
         terms = list()
@@ -64,13 +92,11 @@ class EFTScaling(object):
             if len(params) == 1 and params[0] == '1':
                 # Skip the SM point
                 continue
-            do_filter = False
-            for p in set(params):
-                if len(filter) > 0 and p not in filter:
-                    do_filter = True
-            if do_filter:
-                continue 
-            terms.append(EFTTerm(params, vals, uncerts))
+            elif not cls.keepTerm(params, filter, lin_terms, square_terms, cross_terms):
+                continue      
+            else:
+                terms.append(EFTTerm(params, vals, uncerts))
+
         terms.sort(key=lambda x : x.sortKey())
         return cls(nbins=len(e2ohist.sumW[0]), bin_edges=e2ohist.bin_edges, bin_labels=e2ohist.bin_labels, sm_vals=e2ohist.sumW[0], terms=terms)
 
@@ -109,15 +135,9 @@ class EFTScaling(object):
         scaling_err = np.zeros_like(nominal)
 
         for term in self.terms:
-            if len(term.params) == 1 and not lin_terms:
-                print('Skipping {}'.format(term.params))
+            if not self.keepTerm(term.params, filter, lin_terms, square_terms, cross_terms):
                 continue
-            if len(term.params) == 2 and len(set(term.params)) == 1 and not square_terms:
-                print('Skipping {}'.format(term.params))
-                continue
-            if len(term.params) == 2 and len(set(term.params)) == 2 and not cross_terms:
-                print('Skipping {}'.format(term.params))
-                continue
+
             x = np.copy(term.val)
             x_err = np.copy(term.uncert)            
             for p in term.params:
@@ -187,7 +207,6 @@ class EFTScaling(object):
     
     def excludeRel(self, rel):
         max_size = np.max([np.abs(term.val) for term in self.terms])
-        print(max_size, rel)
         self.terms = [term for term in self.terms if np.max(np.abs(term.val)) / max_size > rel]
 
     def writeToJSON(self, filename, legacy=False, translate_txt=dict(), indent=None):
@@ -211,11 +230,39 @@ class EFTScaling(object):
                 }
             outfile.write(json.dumps(res, sort_keys=False, indent=indent))
 
-    def writeToCommonJSON(self, filename, indent=None):
+    def writeToCommonJSON(self, filename, indent=None, decimals=16):
+        def removeIndentInLists(json_str):  
+            new_str = ""
+            in_list = 0
+            for char in json_str:
+                if char == "[":
+                    in_list += 1
+                elif char == "]":
+                    in_list -= 1
+
+                if (char != "\n") or (in_list == 0):
+                    new_str += char
+                
+            return new_str
+
+        def morePrettyPrinting(json_str):
+            lines = json_str.split("\n")
+            for i, line in enumerate(lines):
+                if "a_" in line or "b_" in line:
+                    label = line.split('"')[1]
+                    lines[i] = lines[i].replace(f'"{label}"', f'"{label}"'.ljust(20))
+
+                    numbers = lines[i].split("[")[1].split("]")[0]
+                    lines[i] = lines[i].replace(numbers, " ".join([x.rjust(8) for x in numbers.split()]))
+
+            return "\n".join(lines)
+
+        bin_ordering = np.argsort(self.bin_labels)
+
         metadata = {
             "coefficients": self.parameters(),
             "observable_shape": "(%d,)"%self.nbins,
-            "observable_names": self.bin_labels
+            "observable_names": [self.bin_labels[idx] for idx in bin_ordering]
         }
 
         def getTermName(term):
@@ -225,14 +272,16 @@ class EFTScaling(object):
                 return "b_" + "_".join(term.params)
 
         data = {
-            "central": {getTermName(term): term.val.tolist() for term in self.terms},
-            "u_MC": {getTermName(term): term.uncert.tolist() for term in self.terms}
+            "central": {getTermName(term): term.val.round(decimals)[bin_ordering].tolist() for term in self.terms},
+            "u_MC": {getTermName(term): term.uncert.round(decimals)[bin_ordering].tolist() for term in self.terms}
         }
 
         with open(filename, 'w') as outfile:
             res = {"metadata": metadata, "data": data}
             s = json.dumps(res, sort_keys=True, indent=indent)
-            outfile.write(removeIndentInLists(s))
+            s = removeIndentInLists(s)
+            s = morePrettyPrinting(s)
+            outfile.write(s)
 
 
     def writeToYAML(self, filename):
@@ -347,8 +396,8 @@ class EFT2ObsHist(object):
         self.sumW = self.sumW[:, ~empty_bin_idx]
         self.sumW2 = self.sumW2[:, ~empty_bin_idx]
         self.numEntries = self.numEntries[:, ~empty_bin_idx]
-        self.bin_edges = list(np.array(self.bin_edges)[~empty_bin_idx])
-        self.bin_labels = list(np.array(self.bin_labels)[~empty_bin_idx])
+        self.bin_edges = np.array(self.bin_edges)[~empty_bin_idx].tolist()
+        self.bin_labels = np.array(self.bin_labels)[~empty_bin_idx].tolist()
 
     def writeToJSON(self, filename):
         with open(filename, 'w') as outfile:

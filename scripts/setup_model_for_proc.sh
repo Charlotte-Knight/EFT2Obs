@@ -24,6 +24,4 @@ if [[ -n $(grep "${model_name}-" $PROC_CARD_PATH) ]] ; then
     echo "Copying restrict card from $restrict_card_origin to $restrict_card_destination"
     cp $restrict_card_origin $restrict_card_destination
   fi
-
-  
 fi
