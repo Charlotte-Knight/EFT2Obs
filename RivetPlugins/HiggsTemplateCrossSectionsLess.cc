@@ -1060,7 +1060,7 @@ namespace Rivet {
       //hist_stage1_2_pTjet25->fill(cat.stage1_2_cat_pTjet25GeV % 100 + off1_2, weight);
       hist_stage1_2_pTjet30->fill(cat.stage1_2_cat_pTjet30GeV % 100 + off1_2, weight);
       //hist_stage1_2_fine_pTjet25->fill(cat.stage1_2_fine_cat_pTjet25GeV % 100 + off1_2f, weight);
-      //hist_stage1_2_fine_pTjet30->fill(cat.stage1_2_fine_cat_pTjet30GeV % 100 + off1_2f, weight);
+      hist_stage1_2_fine_pTjet30->fill(cat.stage1_2_fine_cat_pTjet30GeV % 100 + off1_2f, weight);
 
       // Fill histograms: variables used in the categorization
       //hist_pT_Higgs->fill(cat.higgs.pT(), weight);
@@ -1118,7 +1118,7 @@ namespace Rivet {
                                //hist_stage1_2_pTjet25,
                                hist_stage1_2_pTjet30,
                                //hist_stage1_2_fine_pTjet25,
-                               //hist_stage1_2_fine_pTjet30,
+                               hist_stage1_2_fine_pTjet30,
                                //hist_Njets25,
                                //hist_Njets30,
                                //hist_pT_Higgs,
@@ -1143,7 +1143,7 @@ namespace Rivet {
       //book(hist_stage1_2_pTjet25, "HTXS_stage1_2_pTjet25", 57, 0, 57);
       book(hist_stage1_2_pTjet30, "HTXS_stage1_2_pTjet30", 57, 0, 57);
       //book(hist_stage1_2_fine_pTjet25, "HTXS_stage1_2_fine_pTjet25", 113, 0, 113);
-      //book(hist_stage1_2_fine_pTjet30, "HTXS_stage1_2_fine_pTjet30", 113, 0, 113);
+      book(hist_stage1_2_fine_pTjet30, "HTXS_stage1_2_fine_pTjet30", 113, 0, 113);
       //book(hist_pT_Higgs, "pT_Higgs", 80, 0, 400);
       //book(hist_y_Higgs, "y_Higgs", 80, -4, 4);
       //book(hist_pT_V, "pT_V", 80, 0, 400);
@@ -1170,7 +1170,7 @@ namespace Rivet {
     //Histo1DPtr hist_stage1_pTjet25, hist_stage1_pTjet30;
     //Histo1DPtr hist_stage1_2_pTjet25, hist_stage1_2_pTjet30;
     Histo1DPtr hist_stage1_2_pTjet30;
-    //Histo1DPtr hist_stage1_2_fine_pTjet25, hist_stage1_2_fine_pTjet30;
+    Histo1DPtr hist_stage1_2_fine_pTjet25, hist_stage1_2_fine_pTjet30;
     //Histo1DPtr hist_pT_Higgs, hist_y_Higgs;
     //Histo1DPtr hist_pT_V, hist_pT_jet1;
     //Histo1DPtr hist_deltay_jj, hist_dijet_mass, hist_pT_Hjj;
