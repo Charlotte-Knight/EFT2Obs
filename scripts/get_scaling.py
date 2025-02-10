@@ -15,6 +15,7 @@ parser.add_argument('--output', '-o', default=None)
 parser.add_argument('--config', '-c', default="Rivet.yoda")
 parser.add_argument('--hist', default='/HiggsTemplateCrossSectionsStage1/HTXS_stage1_pTjet30')
 parser.add_argument('--exclude-rel', default=None, type=float, help="Exclude terms with magnitude below this value relative to largest")
+parser.add_argument('--exclude-abs', default=1e-16, type=float, help="Exclude terms with magnitude below this value")
 parser.add_argument('--rebin', default=None, help="Comma separated list of new bin edges")
 parser.add_argument('--save', default='json', help="Comma separated list of output formats (json, txt, latex)")
 parser.add_argument('--save-raw', action='store_true', help="Save the raw histogram information as JSON, for further processing")
@@ -158,6 +159,8 @@ e2oscaling = EFTScaling.fromEFT2ObsHist(e2ohist, filter=filter,
 
 if args.exclude_rel is not None:
     e2oscaling.excludeRel(args.exclude_rel)
+if args.exclude_abs is not None:
+    e2oscaling.excludeAbs(args.exclude_abs)
 
 if args.save_raw:
     print('>> Saving EFT2ObsHist as %s_raw.json' % args.output)
@@ -170,6 +173,10 @@ if 'json' in save_formats:
 if 'common_json' in save_formats:
     print('>> Saving histogram parametrisation to %s.common.json' % args.output)
     e2oscaling.writeToCommonJSON('%s.common.json' % args.output, indent=1, decimals=4)
+
+if 'CMS_json' in save_formats:
+    print('>> Saving histogram parametrisation to %s.CMS.json' % args.output)
+    e2oscaling.writeToCMSJSON('%s.CMS.json' % args.output, indent=1)
 
 if 'yaml' in save_formats:
     print('>> Saving histogram parametrisation to %s.yaml' % args.output)
