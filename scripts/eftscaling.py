@@ -205,6 +205,9 @@ class EFTScaling(object):
     def is2D(self):
         return isinstance(self.bin_edges[0][0], list)
     
+    def excludeAbs(self, abs_size):
+        self.terms = [term for term in self.terms if np.max(np.abs(term.val)) > abs_size]
+    
     def excludeRel(self, rel):
         max_size = np.max([np.abs(term.val) for term in self.terms])
         self.terms = [term for term in self.terms if np.max(np.abs(term.val)) / max_size > rel]
@@ -229,6 +232,22 @@ class EFTScaling(object):
                     "parameters": self.parameters() # this is as a convenience for other scripts, we won't parse it when reading in
                 }
             outfile.write(json.dumps(res, sort_keys=False, indent=indent))
+
+    def writeToCMSJSON(self, filename, indent=None):
+        with open(filename, 'w') as outfile:
+            res = {}
+            for i, bin_label in enumerate(self.bin_labels):
+                res[bin_label] = {}
+                for t in self.terms:
+                    term = t.asJSON()
+                    if len(term[0]) == 1: coeff = f"A_{term[0][0]}"
+                    else:
+                        if term[0][0] == term[0][1]: coeff = f"B_{term[0][0]}_2"
+                        else:                        coeff = f"B_{term[0][0]}_{term[0][1]}"    
+                    res[bin_label][coeff] = term[1][i]
+                    res[bin_label]["u_" + coeff] = term[2][i]
+            
+            outfile.write(json.dumps(res, sort_keys=True, indent=indent))
 
     def writeToCommonJSON(self, filename, indent=None, decimals=16):
         def removeIndentInLists(json_str):  
