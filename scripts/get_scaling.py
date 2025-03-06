@@ -3,9 +3,11 @@
 from __future__ import print_function
 from builtins import range
 from array import array
+import numpy as np
 import math
 import json
 import argparse
+
 import yoda
 from eftscaling import EFT2ObsHist, EFTScaling
 
@@ -34,7 +36,81 @@ parser.add_argument('--skip-square-terms', action='store_true', help="Skip squar
 parser.add_argument('--skip-cross-terms', action='store_true', help="Skip cross terms")
 
 args = parser.parse_args()
+import xml.etree.ElementTree as ET
 
+def correctWeights(w):
+    # number of WCs
+    N = (-3 + int(math.sqrt(9.0 + 8.0 * (float(len(w[0])) - 2.0)) + 0.5)) // 2
+        
+    for ip in range(N):
+        s0 = w[:, 0]
+        s1 = w[:, ip * 2 + 1]
+        s2 = w[:, ip * 2 + 2]
+        
+        s1 -= s0
+        s2 -= s0
+        
+        Ai = 4.0 * s1 - s2
+        Bii = s2 - Ai
+        
+        w[:, ip * 2 + 1] = Ai
+        w[:, ip * 2 + 2] = Bii
+    
+    crossed_offset = 2 + 2 * N
+    c_counter = 0
+    for ix in range(N):
+        for iy in range(ix + 1, N):
+            s = w[:, crossed_offset + c_counter - 1]
+            sm = w[:, 0]
+            sx = w[:, ix * 2 + 1]
+            sy = w[:, iy * 2 + 1]
+            sxx = w[:, ix * 2 + 2]
+            syy = w[:, iy * 2 + 2]
+            
+            s -= (sm + sx + sy + sxx + syy)
+            w[:, crossed_offset + c_counter-1] = s
+
+            c_counter += 1
+    
+    return w
+
+def extract_lhe_weights(file_path):
+    w_list = []
+    
+    with open(file_path, 'r') as file:
+        inside_event = False
+        event_data = ""
+        
+        for line in file:
+            if "<event>" in line:
+                inside_event = True
+                event_data = line
+            elif "</event>" in line:
+                event_data += line
+                inside_event = False
+                
+                # Parse the event XML
+                root = ET.fromstring("<root>" + event_data + "</root>")
+                w = [float(wgt.text) for wgt in root.findall(".//wgt")]
+                w_list.append(w)
+            elif inside_event:
+                event_data += line
+    
+    return np.array(w_list)
+
+def initTerms(params):
+    points = list()
+    points.append(list('1'))
+    for i in range(len(params)):
+        points.append([params[i]])
+        points.append([params[i], params[i]])
+    for ix in range(0, len(params)):
+        for iy in range(ix + 1, len(params)):
+            points.append([params[ix], params[iy]])
+    return points
+
+def PrintEntry(label, val, err):
+    print('%-20s | %12.4f | %12.4f | %12.4f' % (label, val, err, abs(err / val)))
 
 with open(args.config) as jsonfile:
     cfg = json.load(jsonfile)
@@ -66,8 +142,6 @@ if args.bin_labels is not None:
 
 hname = args.hist
 
-aos = yoda.read(args.input, asdict=True)
-
 n_pars = len(pars)
 n_hists = int(1 + n_pars * 2 + (n_pars * n_pars - n_pars) / 2)
 
@@ -75,42 +149,10 @@ filter = list()
 if args.filter_params is not None:
     filter = args.filter_params.split(',')
 
-hists = []
-for i in range(n_hists):
-    if args.nlo:
-        hists.append(aos['%s[rw%.4i_nlo]' % (hname, i)])
-    else:
-        hists.append(aos['%s[rw%.4i]' % (hname, i)])
-
-# print hists
-is2D = isinstance(hists[0], yoda.Histo2D)
-
-if args.rebin is not None and not is2D:
-    rebin = [float(X) for X in args.rebin.split(',')]
-    for h in hists:
-        h.rebinTo(rebin)
-
-nbins = hists[0].numBins()
-
-if is2D:
-    edges = [[list(hists[0].bins()[ib].xEdges()), list(hists[0].bins()[ib].yEdges())] for ib in range(nbins)]
-    # areas = list(hists[0].volumes())
-    areas = [hists[0].bins()[ib].volume() for ib in range(nbins)]
-else:
-    edges = [list(hists[0].bins()[ib].xEdges()) for ib in range(nbins)]
-    areas = list(hists[0].areas())
-    # print (areas,  [hists[0].bins[ib].sumW for ib in range(nbins)])
-
 for p in pars:
     for k in defs:
         if k not in p:
             p[k] = defs[k]
-
-n_divider = 65
-
-
-def PrintEntry(label, val, err):
-    print('%-20s | %12.4f | %12.4f | %12.4f' % (label, val, err, abs(err / val)))
 
 
 # Generate a list of constants that need to be divided out of each entry
@@ -121,30 +163,60 @@ for ip in range(len(pars)):
 for ix in range(0, len(pars)):
     for iy in range(ix + 1, len(pars)):
         eftconstants.append(pars[ix]['val'] * pars[iy]['val'])
-assert(len(eftconstants) == len(hists))
 
-for ip, hist in enumerate(hists):
-    hist.scaleW(1. / eftconstants[ip])
+if ".yoda" in args.input:
+    hists = []
+    aos = yoda.read(args.input, asdict=True)
 
+    for i in range(n_hists):
+        if args.nlo:
+            hists.append(aos['%s[rw%.4i_nlo]' % (hname, i)])
+        else:
+            hists.append(aos['%s[rw%.4i]' % (hname, i)])
 
-def initTerms(params):
-    points = list()
-    points.append(list('1'))
-    for i in range(len(params)):
-        points.append([params[i]])
-        points.append([params[i], params[i]])
-    for ix in range(0, len(params)):
-        for iy in range(ix + 1, len(params)):
-            points.append([params[ix], params[iy]])
-    return points
+    # print hists
+    is2D = isinstance(hists[0], yoda.Histo2D)
 
-e2ohist = EFT2ObsHist(
-    terms=initTerms([X['name'] for X in pars]),
-    sumW=[[hist.bins()[ib].sumW() for ib in range(nbins)] for hist in hists],
-    sumW2=[[hist.bins()[ib].sumW2() for ib in range(nbins)] for hist in hists],
-    numEntries=[[hist.bins()[ib].numEntries() for ib in range(nbins)] for hist in hists],
-    bin_edges=edges,
-    bin_labels=bin_labels)
+    if args.rebin is not None and not is2D:
+        rebin = [float(X) for X in args.rebin.split(',')]
+        for h in hists:
+            h.rebinTo(rebin)
+
+    nbins = hists[0].numBins()
+
+    if is2D:
+        edges = [[list(hists[0].bins()[ib].xEdges()), list(hists[0].bins()[ib].yEdges())] for ib in range(nbins)]
+            # areas = list(hists[0].volumes())
+        areas = [hists[0].bins()[ib].volume() for ib in range(nbins)]
+    else:
+        edges = [list(hists[0].bins()[ib].xEdges()) for ib in range(nbins)]
+        areas = list(hists[0].areas())
+            # print (areas,  [hists[0].bins[ib].sumW for ib in range(nbins)])
+            
+    assert(len(eftconstants) == len(hists))
+    for ip, hist in enumerate(hists):
+        hist.scaleW(1. / eftconstants[ip])
+        
+    e2ohist = EFT2ObsHist(
+        terms=initTerms([X['name'] for X in pars]),
+        sumW=[[hist.bins()[ib].sumW() for ib in range(nbins)] for hist in hists],
+        sumW2=[[hist.bins()[ib].sumW2() for ib in range(nbins)] for hist in hists],
+        numEntries=[[hist.bins()[ib].numEntries() for ib in range(nbins)] for hist in hists],
+        bin_edges=edges,
+        bin_labels=bin_labels)
+
+elif ".lhe" in args.input:
+    event_weights = extract_lhe_weights(args.input) # this is list of each event's list of "raw" WCs
+    event_weights = correctWeights(event_weights)
+    event_weights /= np.array(eftconstants)
+
+    e2ohist = EFT2ObsHist(
+        terms=initTerms([X['name'] for X in pars]),
+        sumW=event_weights.sum(axis=0).reshape(-1, 1),
+        sumW2=(event_weights**2).sum(axis=0).reshape(-1, 1),
+        numEntries=[[len(event_weights)]],
+        bin_edges=[[-1, 1]]
+    )
 
 if args.remove_empty_bins:
     e2ohist.removeEmptyBins()
@@ -153,7 +225,7 @@ if not args.skip_print:
     e2ohist.printToScreen(style=args.print_style, colorAbove=args.color_above)
 e2oscaling = EFTScaling.fromEFT2ObsHist(e2ohist, filter=filter, 
                                         lin_terms=not args.skip_lin_terms,
-                                        square_terms=not args.skip_square_terms, 
+                                        square_terms=not args.skip_square_terms,
                                         cross_terms=not args.skip_cross_terms)
 
 if args.exclude_rel is not None:
