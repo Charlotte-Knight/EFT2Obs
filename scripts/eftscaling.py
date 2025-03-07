@@ -416,7 +416,8 @@ class EFT2ObsHist(object):
         self.sumW2 = self.sumW2[:, ~empty_bin_idx]
         self.numEntries = self.numEntries[:, ~empty_bin_idx]
         self.bin_edges = np.array(self.bin_edges)[~empty_bin_idx].tolist()
-        self.bin_labels = np.array(self.bin_labels)[~empty_bin_idx].tolist()
+        if len(self.bin_labels) > 0:
+            self.bin_labels = np.array(self.bin_labels)[~empty_bin_idx].tolist()
 
     def writeToJSON(self, filename):
         with open(filename, 'w') as outfile:

@@ -216,7 +216,8 @@ elif ".lhe" in args.input:
         sumW=event_weights.sum(axis=0).reshape(-1, 1),
         sumW2=(event_weights**2).sum(axis=0).reshape(-1, 1),
         numEntries=[[len(event_weights)]],
-        bin_edges=[[-1, 1]]
+        bin_edges=[[-1, 1]],
+        bin_labels=["inclusive"]
     )
 
 if args.remove_empty_bins:
