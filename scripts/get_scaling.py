@@ -41,8 +41,7 @@ import xml.etree.ElementTree as ET
 
 def correctWeights(w):
     # number of WCs
-    N = (-3 + int(math.sqrt(9.0 + 8.0 * (float(len(w[0])) - 2.0)) + 0.5)) // 2
-        
+    N = int( -(3/2) + np.sqrt(9/4 - 2*(1-len(w[0]))) )
     for ip in range(N):
         s0 = w[:, 0]
         s1 = w[:, ip * 2 + 1]
@@ -57,11 +56,11 @@ def correctWeights(w):
         w[:, ip * 2 + 1] = Ai
         w[:, ip * 2 + 2] = Bii
     
-    crossed_offset = 2 + 2 * N
+    crossed_offset = 2*N + 1
     c_counter = 0
     for ix in range(N):
         for iy in range(ix + 1, N):
-            s = w[:, crossed_offset + c_counter - 1]
+            s = w[:, crossed_offset + c_counter]
             sm = w[:, 0]
             sx = w[:, ix * 2 + 1]
             sy = w[:, iy * 2 + 1]
@@ -69,9 +68,11 @@ def correctWeights(w):
             syy = w[:, iy * 2 + 2]
             
             s -= (sm + sx + sy + sxx + syy)
-            w[:, crossed_offset + c_counter-1] = s
+            w[:, crossed_offset + c_counter] = s
 
             c_counter += 1
+            
+    assert crossed_offset + c_counter == len(w[0]) 
     
     return w
 
