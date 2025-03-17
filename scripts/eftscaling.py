@@ -292,7 +292,8 @@ class EFTScaling(object):
 
         data = {
             "central": {getTermName(term): term.val.round(decimals)[bin_ordering].tolist() for term in self.terms},
-            "u_MC": {getTermName(term): term.uncert.round(decimals)[bin_ordering].tolist() for term in self.terms}
+            "u_MC": {getTermName(term): term.uncert.round(decimals)[bin_ordering].tolist() for term in self.terms},
+            "sm_xs": [f"{val:4g}" for val in self.sm_vals[bin_ordering]]
         }
 
         with open(filename, 'w') as outfile:

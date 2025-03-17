@@ -98,7 +98,17 @@ def extract_lhe_weights(file_path):
             elif inside_event:
                 event_data += line
     
-    return np.array(w_list)
+    return np.array(w_list) / len(w_list)
+
+def extract_direct_weights(file_path):
+    with open(file_path, 'r') as file:
+        results = json.load(file)
+        
+    N = len(results)
+    num = [results[f"rw{i:04d}"][0] for i in range(N)]
+    uncert = [results[f"rw{i:04d}"][1] for i in range(N)]
+    
+    return np.array([num])
 
 def initTerms(params):
     points = list()
@@ -207,8 +217,8 @@ if ".yoda" in args.input:
         bin_edges=edges,
         bin_labels=bin_labels)
 
-elif ".lhe" in args.input:
-    event_weights = extract_lhe_weights(args.input) # this is list of each event's list of "raw" WCs
+elif ".lhe" in args.input or ".json " in args.input:
+    event_weights = extract_lhe_weights(args.input) if ".lhe" in args.input else extract_direct_weights(args.input) 
     event_weights = correctWeights(event_weights)
     event_weights /= np.array(eftconstants)
 
